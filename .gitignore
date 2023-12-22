@@ -1,0 +1,9 @@
+# ignore all.txt png files
+*.txt
+*.png
+*.bmp
+*.xlsx
+*.psd
+*.jpg
+*.jpeg
+*.docx
