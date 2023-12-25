@@ -25,15 +25,21 @@ Indirection = Folder+"\\Input"
 name = os.listdir(Indirection)
 k = len(name)
 
+def palette_from_dict(c_dict):
+        palette = [] 
+        for i in np.arange(256):
+            if i in c_dict:
+                palette.extend(c_dict[i])
+            else:
+                palette.extend([0, 0, 0])
+        return palette
+
 # Preparing image for run
-for i in range(0,k):
-    
-    # text_file.write("Picture:",str(i+1)," of ",k+'\\n')
+
+
+# Convert and Save image file for analysis   
+def Preparingimage(k,Indirection,name,Folder): 
     Message = "Picture:"+ str(int(i)+1) + " of "+str(k)+'\n'+name[i]
-    
-    # text_file.write(str(name[i])+'\n')
-    # print("Picture:",i+1," of ",k)
-    # print(name[i])
     print(Message)
     text_file.write(str(datetime.now("%d-%m-%Y, %H:%M:%S"))+Message)
     filename = (name[i].split(".png",1))[0]
@@ -44,18 +50,11 @@ for i in range(0,k):
     imo.save(output+"\\bmp\\"+filename+".bmp")
     imo.save(complete+"\\bmp\\"+filename+".bmp")
     imo.save(complete+"\\png\\"+filename+".png")
-    # test =sns.color_palette("husl", 8)
-    # test.show()
+    return filename,output,complete,Defect
 
-# Check Original file result
-    def palette_from_dict(c_dict):
-        palette = [] 
-        for i in np.arange(256):
-            if i in c_dict:
-                palette.extend(c_dict[i])
-            else:
-                palette.extend([0, 0, 0])
-        return palette
+
+# Check Original file result   
+def Colorcheck(filename,output,complete,State):
     new = Image.open(output+"\\bmp\\"+filename+".bmp")
     converted = new.quantize(colors=8, method=None, kmeans=0, palette=None)
     # converted
@@ -83,115 +82,115 @@ for i in range(0,k):
     cnt = 0
     for img in glob.glob(Indirection+"\\"+filename+'C.bmp'):
         Image.open(img)
-        Image.open(img).resize((300,300)).save(os.path.join(Folder+"\\First", str(filename)+'.png'))
+        Image.open(img).resize((300,300)).save(os.path.join(Folder+"\\"+State, str(filename)+'.png'))
         cnt += 1
+    return colors_dict,PILImage
     #PILImage.show()
+def Exportexcel(PILImage,complete,filename):
+    p = np.array(PILImage)
 
+    df = pd.DataFrame(p)
+    def color(a):
+        d = {0: 'White', 1:'Green', 2:'Blue', 3: 'Cyan', 4: 'Red', 5:'Yellow', 6: 'Magenta', 7: 'Black' }
+        d1 = {k: 'background-color:' + v for k, v in d.items()}
+        df1 = pd.DataFrame(index=a.index, columns=a.columns)
+        df1 = a.applymap(d1.get).fillna('')
+        return df1
+    df.style.apply(color,axis = None).to_excel(complete+"\\Excel\\"+filename+'.xlsx',sheet_name='Code')
+
+    with pd.ExcelWriter(complete+"\\Excel\\"+filename+'.xlsx', engine='openpyxl', mode='a') as writer:
+        Rowcolor= pd.DataFrame(map(set,df.values)) 
+        Rowcolor["sum"] = Rowcolor.sum(axis=1)
+        Rowcolor["count"] = pd.DataFrame(map(set,df.values)).count(axis=1)
+        Rowcolor["Colorcount"] = pd.DataFrame(df.apply(pd.Series.value_counts).sum(axis=1))
+        Defect =Rowcolor["Colorcount"].index[Rowcolor["Colorcount"]<60]
+        text_file.write(str(datetime.now("%d-%m-%Y, %H:%M:%S"))+str(Defect)+'\n')
+        print (Defect)
+
+        Target = set(np.concatenate(df.values))
+        j = []
+        f = []
+        for t in Target:
+            target_value = t  
+            values_all=[]
+            values_in = []
+            for r in range(0,len(df)):
+                row = df.iloc[r].values
+                values_all.extend(row)
+                if target_value in row:
+                    values_in.extend(row)
+
+            values_all = sorted(set(values_all))
+            values_in = sorted(set(values_in))
+
+            values_out = values_all
+            for i in values_in:
+                values_out.remove(i)
+            values_out = sorted(values_out)
+            f = np.array(values_out)
+            
+            j.append(f)
+        
+
+
+        Rowcolor.to_excel(writer,sheet_name='Summary')
+        Rowcolor = pd.DataFrame(j)
+        Rowcolor["Target"] = pd.DataFrame(Target)
+        Rowcolor.to_excel(writer,sheet_name='Test')        
+#        print(df)
+        im  = Image.open(complete+"\\png\\"+filename+".png")
+    return df
 # Output cure image process
+def ExportCureimage(colors_dict,complete,filename,State,Defect):
     while Defect.size > 0:
         # test =sns.color_palette("husl", 8)
         # test.show()
-        def palette_from_dict(c_dict):
-            palette = []
-            for i in np.arange(256):
-                if i in c_dict:
-                    palette.extend(c_dict[i])
-                else:
-                    palette.extend([0, 0, 0])
-            return palette
-        new = Image.open(complete+"\\bmp\\"+filename+".bmp")
-        converted = new.quantize(colors=8, method=None, kmeans=0, palette=None)
-        # converted
-        converted.save(complete+"\\Convert\\"+filename+"con.bmp")
+        palette_from_dict(colors_dict)
+        Colorcheck(filename,complete,complete,State)
+        Exportexcel()
+    #     new = Image.open(complete+"\\bmp\\"+filename+".bmp")
+    #     converted = new.quantize(colors=8, method=None, kmeans=0, palette=None)
+    #     # converted
+    #     converted.save(complete+"\\Convert\\"+filename+"con.bmp")
 
-        # converted.show()
-        p = np.array(converted)
-    #   print(p)
+    #     # converted.show()
+    #     p = np.array(converted)
+    # #   print(p)
 
 
         
-        PILImage = Image.fromarray(p, mode='P')
+    #     PILImage = Image.fromarray(p, mode='P')
 
-        White = [255, 255, 255] 
+    #     White = [255, 255, 255] 
 
-        Black   = 	[0, 0, 0]	    #000000 
-        White   =	[255, 255, 255]	#FFFFFF 
-        Red	    =   [255, 0, 0]	    #FF0000 
-        Green   =	[0, 255, 0]	    #00FF00
-        Blue    =   [0, 0, 255]	    #0000FF
-        Yellow	=   [255, 255, 0]	#FFFF00
-        Cyan	=   [0, 255, 255]	#00FFFF
-        Magenta	=   [255, 0, 255]	#FF00FF
-        colors_dict = {0: Black, 1:Green, 2:Blue, 3: Cyan, 4: Red, 5:Yellow, 6: Magenta, 7: White }
-    #   print (colors_dict)
+    #     Black   = 	[0, 0, 0]	    #000000 
+    #     White   =	[255, 255, 255]	#FFFFFF 
+    #     Red	    =   [255, 0, 0]	    #FF0000 
+    #     Green   =	[0, 255, 0]	    #00FF00
+    #     Blue    =   [0, 0, 255]	    #0000FF
+    #     Yellow	=   [255, 255, 0]	#FFFF00
+    #     Cyan	=   [0, 255, 255]	#00FFFF
+    #     Magenta	=   [255, 0, 255]	#FF00FF
+    #     colors_dict = {0: Black, 1:Green, 2:Blue, 3: Cyan, 4: Red, 5:Yellow, 6: Magenta, 7: White }
+    # #   print (colors_dict)
 
-        PILImage.putpalette(palette_from_dict(colors_dict))
-        PILImage.save(complete+"\\Colorcheck\\"+filename+"C.bmp")
+    #     PILImage.putpalette(palette_from_dict(colors_dict))
+    #     PILImage.save(complete+"\\Colorcheck\\"+filename+"C.bmp")
         
-        # out_dir = r'C:\Users\anupo\OneDrive\Bluesapphire\Pattern\Processing\01Colorcheck\output'
-        cnt = 0
-        for img in glob.glob(Indirection+filename+'C.bmp'):
-            Image.open(img)
-            Image.open(img).resize((300,300)).save(os.path.join(Folder+"\\Final", str(filename)+'.png'))
-            cnt += 1
+    #     # out_dir = r'C:\Users\anupo\OneDrive\Bluesapphire\Pattern\Processing\01Colorcheck\output'
+    #     cnt = 0
+    #     for img in glob.glob(Indirection+filename+'C.bmp'):
+    #         Image.open(img)
+    #         Image.open(img).resize((300,300)).save(os.path.join(Folder+"\\Final", str(filename)+'.png'))
+    #         cnt += 1
         
 
 
 # Export color value to excel
-        p = np.array(PILImage)
 
-        df = pd.DataFrame(p)
-        def color(a):
-            d = {0: 'White', 1:'Green', 2:'Blue', 3: 'Cyan', 4: 'Red', 5:'Yellow', 6: 'Magenta', 7: 'Black' }
-            d1 = {k: 'background-color:' + v for k, v in d.items()}
-            df1 = pd.DataFrame(index=a.index, columns=a.columns)
-            df1 = a.applymap(d1.get).fillna('')
-            return df1
-        df.style.apply(color,axis = None).to_excel(complete+"\\Excel\\"+filename+'.xlsx',sheet_name='Code')
-
-        with pd.ExcelWriter(complete+"\\Excel\\"+filename+'.xlsx', engine='openpyxl', mode='a') as writer:
-            Rowcolor= pd.DataFrame(map(set,df.values)) 
-            Rowcolor["sum"] = Rowcolor.sum(axis=1)
-            Rowcolor["count"] = pd.DataFrame(map(set,df.values)).count(axis=1)
-            Rowcolor["Colorcount"] = pd.DataFrame(df.apply(pd.Series.value_counts).sum(axis=1))
-            Defect =Rowcolor["Colorcount"].index[Rowcolor["Colorcount"]<60]
-            text_file.write(str(datetime.now("%d-%m-%Y, %H:%M:%S"))+str(Defect)+'\n')
-            print (Defect)
-
-            Target = set(np.concatenate(df.values))
-            j = []
-            f = []
-            for t in Target:
-                target_value = t  
-                values_all=[]
-                values_in = []
-                for r in range(0,len(df)):
-                    row = df.iloc[r].values
-                    values_all.extend(row)
-                    if target_value in row:
-                        values_in.extend(row)
-
-                values_all = sorted(set(values_all))
-                values_in = sorted(set(values_in))
-
-                values_out = values_all
-                for i in values_in:
-                    values_out.remove(i)
-                values_out = sorted(values_out)
-                f = np.array(values_out)
-                
-                j.append(f)
-            
-
-
-            Rowcolor.to_excel(writer,sheet_name='Summary')
-            Rowcolor = pd.DataFrame(j)
-            Rowcolor["Target"] = pd.DataFrame(Target)
-            Rowcolor.to_excel(writer,sheet_name='Test')        
-    #        print(df)
-            im  = Image.open(complete+"\\png\\"+filename+".png")
 
 ## Cure image Color
+    def Cureimage():
             if Defect.size >0 :
                 for row in range(df.shape[0]): # df is the DataFrame
                     for col in range(df.shape[1]):
@@ -325,5 +324,18 @@ for F in os.listdir(Afolder): #Get Folder First and Final
             text_file.write(str(os.path.join(Afolder,F,I,N))+'\n')
             print((os.path.join(Afolder,F,I,N)))
 text_file.close()
-# %%
-test
+#%%
+
+def main():
+    for i in range(0,k):
+        filename,output,complete,Defect= Preparingimage(k,Indirection,name,Folder)
+        State = "First"
+        colors_dict,PILImage = Colorcheck(filename,output,complete,State)
+        State = "Final"
+        while Defect.size > 0:
+            ExportCureimage(colors_dict,complete,filename,State,Defect)
+            Exportexcel(PILImage,complete,filename)
+
+
+
+#%%
